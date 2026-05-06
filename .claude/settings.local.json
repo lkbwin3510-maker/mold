@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm list -g claude 2>$null)",
+      "PowerShell(npm list -g @anthropic-ai/claude-code 2>$null)",
+      "PowerShell(Get-ExecutionPolicy -List)",
+      "PowerShell(powershell -Command \"Get-ExecutionPolicy -List\")",
+      "Bash(claude --version)",
+      "PowerShell(Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force)",
+      "PowerShell(claude --version)"
+    ]
+  }
+}
