@@ -220,7 +220,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
   gap:12px;
   margin-bottom:16px;
 }
-@media(max-width:600px) { .metrics { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:700px) { .metrics { grid-template-columns:repeat(2,1fr); } }
 .metric-card {
   background:var(--surface);
   border:1px solid var(--border);
@@ -642,7 +642,7 @@ function renderDashboard(d) {
         </div>
         <div class="life-stat">
           <div class="life-stat-label">잔여 SHOT</div>
-          <div class="life-stat-val" style="color:${remaining && remaining < 0 ? '#ef4444' : '#e2e8f0'}">${remaining !== null ? fmt(remaining) : '-'}</div>
+          <div class="life-stat-val" style="color:${remaining && remaining < 0 ? '#dc2626' : '#0d1420'}">${remaining !== null ? fmt(remaining) : '-'}</div>
         </div>
         <div class="life-stat">
           <div class="life-stat-label">입고수량</div>
@@ -651,6 +651,29 @@ function renderDashboard(d) {
       </div>
     </div>`;
   }
+
+  // 예상 수리 시기 계산 (잔여 shot / 일평균 생산량 기준 — 일평균 200 shot 가정)
+  const AVG_DAILY = 200;
+  let repairDateStr = '-';
+  let repairDday = null;
+  if (remaining !== null && remaining > 0) {
+    const daysLeft = Math.round(remaining / AVG_DAILY);
+    const repairDate = new Date();
+    repairDate.setDate(repairDate.getDate() + daysLeft);
+    repairDateStr = repairDate.toISOString().split('T')[0];
+    repairDday = daysLeft;
+  } else if (remaining !== null && remaining <= 0) {
+    repairDateStr = '수리 필요';
+    repairDday = 0;
+  }
+
+  // 마지막 생산일 (수리이력에서 가장 최근 날짜, 없으면 '-')
+  const lastRepair = repairs.length ? repairs[repairs.length-1] : null;
+  const lastProdDate = d.last_prod_date || '-';
+
+  // 예상 수리 D-day 색상
+  const dDayColor = repairDday === null ? '#6a7a90' : repairDday <= 30 ? '#dc2626' : repairDday <= 90 ? '#d97706' : '#059669';
+  const dDayLabel = repairDday === null ? '-' : repairDday === 0 ? '즉시수리' : 'D-' + repairDday;
 
   // 메트릭 카드
   html += `<div class="metrics">
@@ -668,6 +691,16 @@ function renderDashboard(d) {
       <div class="metric-label">수리이력</div>
       <div class="metric-val">${repairs.length}건</div>
       <div class="metric-sub">등록된 수리</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">예상 수리 시기</div>
+      <div class="metric-val" style="font-size:14px;color:${dDayColor}">${repairDateStr}</div>
+      <div class="metric-sub" style="color:${dDayColor};font-weight:600">${dDayLabel}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">마지막 생산일</div>
+      <div class="metric-val" style="font-size:14px">${lastProdDate}</div>
+      <div class="metric-sub">${lastRepair ? '최근 수리: '+lastRepair.date : '수리이력 없음'}</div>
     </div>
   </div>`;
 
