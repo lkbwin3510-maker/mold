@@ -12,9 +12,9 @@
   --surface2: #f1f4f8;
   --border: #e2e8f0;
   --border2: #c8d3e0;
-  --text: #1a2332;
-  --text2: #5a6a80;
-  --text3: #9aaabb;
+  --text: #0d1420;
+  --text2: #3a4a60;
+  --text3: #6a7a90;
   --accent: #2563eb;
   --accent2: #1d4ed8;
   --ok: #059669;
@@ -190,7 +190,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
   align-items:center;
   margin-bottom:12px;
 }
-.life-label { font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.1em; font-family:var(--mono); }
+.life-label { font-size:11px; color:#0d1420; font-weight:600; text-transform:uppercase; letter-spacing:.1em; font-family:var(--mono); }
 .life-pct { font-family:var(--mono); font-size:22px; font-weight:500; }
 .life-bar-bg {
   height:10px;
@@ -210,8 +210,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
   flex-wrap:wrap;
 }
 .life-stat { font-size:12px; }
-.life-stat-label { color:var(--text3); font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.08em; }
-.life-stat-val { color:var(--text); font-family:var(--mono); font-size:13px; margin-top:2px; }
+.life-stat-label { color:#3a4a60; font-weight:500; font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.08em; }
+.life-stat-val { color:#0d1420; font-weight:600; font-family:var(--mono); font-size:13px; margin-top:2px; }
 
 /* ── 메트릭 그리드 ── */
 .metrics {
@@ -227,8 +227,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
   border-radius:10px;
   padding:16px 18px;
 }
-.metric-label { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.1em; font-family:var(--mono); margin-bottom:6px; }
-.metric-val { font-family:var(--mono); font-size:18px; font-weight:500; color:var(--text); }
+.metric-label { font-size:11px; color:#0d1420; font-weight:600; text-transform:uppercase; letter-spacing:.08em; font-family:var(--mono); margin-bottom:6px; }
+.metric-val { font-family:var(--mono); font-size:18px; font-weight:600; color:var(--text); }
 .metric-sub { font-size:11px; color:var(--text3); margin-top:3px; }
 
 /* ── 정보 그리드 ── */
@@ -246,37 +246,40 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
   padding:16px 20px;
 }
 .info-card-title {
-  font-size:10px;
-  color:var(--text3);
+  font-size:11px;
+  color:#0d1420;
+  font-weight:600;
   text-transform:uppercase;
   letter-spacing:.1em;
   font-family:var(--mono);
   margin-bottom:12px;
   padding-bottom:8px;
-  border-bottom:1px solid var(--border);
+  border-bottom:2px solid #0d1420;
 }
 .info-row { display:flex; justify-content:space-between; align-items:flex-start; padding:5px 0; gap:12px; }
 .info-row + .info-row { border-top:1px solid var(--border); }
-.info-key { font-size:12px; color:var(--text3); white-space:nowrap; flex-shrink:0; }
-.info-val { font-size:12px; color:var(--text); text-align:right; font-family:var(--mono); word-break:break-all; }
+.info-key { font-size:12px; color:#3a4a60; font-weight:500; white-space:nowrap; flex-shrink:0; }
+.info-val { font-size:12px; color:#0d1420; font-weight:500; text-align:right; font-family:var(--mono); word-break:break-all; }
 
 /* ── 수리이력 ── */
 .repair-card {
   background:var(--surface);
   border:1px solid var(--border);
+  border-left:3px solid var(--accent);
   border-radius:10px;
   padding:16px 20px;
   margin-bottom:16px;
 }
 .repair-title {
-  font-size:10px;
-  color:var(--text3);
+  font-size:11px;
+  color:#0d1420;
+  font-weight:600;
   text-transform:uppercase;
   letter-spacing:.1em;
   font-family:var(--mono);
   margin-bottom:12px;
   padding-bottom:8px;
-  border-bottom:1px solid var(--border);
+  border-bottom:2px solid #0d1420;
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -329,8 +332,9 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
   padding:0 24px;
 }
 .home-title {
-  font-size:11px;
-  color:var(--text3);
+  font-size:12px;
+  color:#0d1420;
+  font-weight:600;
   text-transform:uppercase;
   letter-spacing:.14em;
   font-family:var(--mono);
@@ -353,7 +357,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 }
 .stat-card:hover { border-color:var(--border2); }
 .stat-num { font-family:var(--mono); font-size:28px; font-weight:500; margin-bottom:4px; }
-.stat-lbl { font-size:11px; color:var(--text3); font-family:var(--mono); text-transform:uppercase; letter-spacing:.08em; }
+.stat-lbl { font-size:11px; color:#3a4a60; font-weight:500; font-family:var(--mono); text-transform:uppercase; letter-spacing:.08em; }
 .recent-title { font-size:11px; color:var(--text3); font-family:var(--mono); text-transform:uppercase; letter-spacing:.14em; margin-bottom:12px; }
 .alert-list { display:flex; flex-direction:column; gap:8px; }
 .alert-item {
