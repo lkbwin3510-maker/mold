@@ -441,7 +441,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 
 <!-- 헤더 -->
 <div class="header">
-  <div class="header-logo">AJW · MOLD</div>
+  <div class="header-logo" onclick="goHome()" style="cursor:pointer">AJW · MOLD</div>
   <div class="header-divider"></div>
   <div class="header-title">금형 관리 시스템</div>
   <div class="header-count" id="header-count"></div>
@@ -449,11 +449,11 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 
 <!-- 검색 -->
 <div class="search-wrap">
-  <div class="search-label">품번 조회</div>
+  <div class="search-label">품번 / 모델명 조회</div>
   <div class="search-row">
     <div class="autocomplete-wrap">
       <input class="search-input" id="search-input" type="text"
-        placeholder="품번 입력 (예: P11-C1-1011, AJP-00682 ...)"
+        placeholder="품번 또는 모델명 입력 (예: P11-C1-1011, BOFC-C1, OTP-MA ...)"
         autocomplete="off" spellcheck="false">
       <div class="autocomplete-list" id="ac-list" style="display:none"></div>
     </div>
@@ -472,6 +472,9 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
   <div class="no-result-code" id="no-result-code"></div>
   <div class="no-result-msg">해당 품번을 찾을 수 없습니다</div>
 </div>
+
+<!-- 모델 부품 리스트 -->
+<div class="model-list-wrap" id="model-list-wrap" style="display:none;max-width:860px;margin:32px auto 80px;padding:0 24px;"></div>
 
 <!-- 대시보드 -->
 <div class="dashboard" id="dashboard"></div>
@@ -529,6 +532,26 @@ const acList = document.getElementById('ac-list');
 input.addEventListener('input', () => {
   const q = input.value.trim().toLowerCase();
   if (!q || q.length < 2) { acList.style.display='none'; return; }
+  // 모델명 완전일치 여부 확인 (제품군에 포함되는지)
+  const modelGroups = [...new Set(MOLD_DATA.map(d => d.product_group).filter(Boolean))];
+  const matchedModel = modelGroups.find(g => g.toLowerCase().includes(q));
+
+  if (matchedModel) {
+    // 모델명 매칭 — 해당 모델 부품 리스트 미리보기
+    const modelHits = MOLD_DATA.filter(d => d.product_group && d.product_group.toLowerCase().includes(q)).slice(0, 6);
+    acList.innerHTML = `<div style="padding:8px 16px 4px;font-size:10px;color:#6a7a90;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border)">모델명 검색: ${modelHits.length}개 부품</div>`
+      + modelHits.map(d => {
+        const st = lifeStatus(d.life_ratio);
+        return `<div class="autocomplete-item" onclick="selectItem('${d.part_id.replace(/'/g,"\'")}')">
+          <span class="ac-part">${d.part_id}</span>
+          <span class="ac-name">${d.mold_name || ''}</span>
+          <span class="status-badge ${st.cls}" style="font-size:10px;padding:1px 7px;margin-left:auto">${st.label}</span>
+        </div>`;
+      }).join('');
+    acList.style.display='block';
+    return;
+  }
+
   const hits = MOLD_DATA.filter(d =>
     d.part_id.toLowerCase().includes(q) ||
     (d.mold_name && d.mold_name.toLowerCase().includes(q)) ||
@@ -577,12 +600,28 @@ function lifeStatus(ratio) {
 function doSearch() {
   const q = input.value.trim();
   if (!q) return;
-  const found = MOLD_DATA.find(d => d.part_id.toLowerCase() === q.toLowerCase())
-             || MOLD_DATA.find(d => d.part_id.toLowerCase().includes(q.toLowerCase()));
-
+  acList.style.display='none';
   document.getElementById('home-wrap').style.display = 'none';
   const noRes = document.getElementById('no-result');
   const dash  = document.getElementById('dashboard');
+  const modelList = document.getElementById('model-list-wrap');
+
+  // 모델명 검색 여부 확인
+  const modelHits = MOLD_DATA.filter(d =>
+    d.product_group && d.product_group.toLowerCase().includes(q.toLowerCase())
+  );
+  const exactPart = MOLD_DATA.find(d => d.part_id.toLowerCase() === q.toLowerCase());
+
+  if (!exactPart && modelHits.length > 0) {
+    // 모델명 결과 리스트 화면
+    noRes.style.display='none';
+    dash.style.display='none';
+    renderModelList(q, modelHits);
+    return;
+  }
+
+  const found = exactPart || MOLD_DATA.find(d => d.part_id.toLowerCase().includes(q.toLowerCase()));
+  modelList.style.display='none';
 
   if (!found) {
     document.getElementById('no-result-code').textContent = q;
@@ -592,7 +631,61 @@ function doSearch() {
   }
   noRes.style.display='none';
   renderDashboard(found);
-  acList.style.display='none';
+}
+
+// ── 모델명 리스트 렌더 ──
+function renderModelList(q, items) {
+  const wrap = document.getElementById('model-list-wrap');
+  const st_ok = lifeStatus(null);
+  let html = `<div class="anim">`;
+  html += `<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:18px;font-weight:600;color:#0d1420">${q.toUpperCase()}</div>
+      <div style="font-size:13px;color:#6a7a90;margin-top:2px">총 ${items.length}개 부품 금형</div>
+    </div>
+    <button onclick="goHome()" style="margin-left:auto;background:none;border:1px solid var(--border2);color:#3a4a60;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:var(--sans)">← 홈으로</button>
+  </div>`;
+
+  html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">`;
+  html += `<div style="display:grid;grid-template-columns:1.5fr 2fr 1fr 1fr 1fr;padding:10px 16px;background:#f8f9fb;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:#3a4a60;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;">
+    <span>품번</span><span>금형명</span><span style="text-align:center">캐비티</span><span style="text-align:right">생산SHOT</span><span style="text-align:right">수명</span>
+  </div>`;
+
+  items.forEach((d, i) => {
+    const st = lifeStatus(d.life_ratio);
+    const pct = d.life_ratio !== null ? (d.life_ratio*100).toFixed(1)+'%' : '-';
+    const bg = i % 2 === 0 ? '#ffffff' : '#f8f9fb';
+    html += `<div onclick="selectModelItem('${d.part_id.replace(/'/g,"\'")}')" style="display:grid;grid-template-columns:1.5fr 2fr 1fr 1fr 1fr;padding:11px 16px;background:${bg};border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;align-items:center;"
+      onmouseover="this.style.background='#eef3ff'" onmouseout="this.style.background='${bg}'">
+      <span style="font-family:var(--mono);font-size:12px;color:#2563eb;font-weight:500">${d.part_id}</span>
+      <span style="font-size:13px;color:#0d1420">${d.mold_name || '-'}</span>
+      <span style="font-size:12px;color:#3a4a60;text-align:center">${d.cavity || '-'}</span>
+      <span style="font-family:var(--mono);font-size:12px;color:#0d1420;text-align:right">${d.prod_shot ? Number(d.prod_shot).toLocaleString() : '-'}</span>
+      <span style="text-align:right"><span class="status-badge ${st.cls}" style="font-size:10px;padding:2px 8px">${st.label}</span></span>
+    </div>`;
+  });
+
+  html += `</div></div>`;
+  wrap.innerHTML = html;
+  wrap.style.display='block';
+}
+
+function selectModelItem(partId) {
+  input.value = partId;
+  document.getElementById('model-list-wrap').style.display='none';
+  const found = MOLD_DATA.find(d => d.part_id === partId);
+  if (found) {
+    document.getElementById('home-wrap').style.display='none';
+    renderDashboard(found);
+  }
+}
+
+function goHome() {
+  document.getElementById('model-list-wrap').style.display='none';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('no-result').style.display='none';
+  document.getElementById('home-wrap').style.display='block';
+  input.value='';
 }
 
 // ── 대시보드 렌더 ──
