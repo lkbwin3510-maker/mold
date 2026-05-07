@@ -712,12 +712,13 @@ function renderDashboard(d) {
       <div class="info-row"><span class="info-key">재질</span><span class="info-val">${d.material || '-'}</span></div>
       <div class="info-row"><span class="info-key">국내/해외</span><span class="info-val">${d.domestic || '-'}</span></div>
       <div class="info-row"><span class="info-key">구분</span><span class="info-val">${d.category}</span></div>
+      <div class="info-row"><span class="info-key">캐비티</span><span class="info-val">${d.cavity || '-'}</span></div>
+      <div class="info-row"><span class="info-key">제품군</span><span class="info-val" style="font-size:11px">${d.product_group || '-'}</span></div>
+      <div class="info-row"><span class="info-key">상태</span><span class="info-val">${d.status}</span></div>
     </div>
     <div class="info-card">
       <div class="info-card-title">계약 / 서류</div>
       <div class="info-row"><span class="info-key">계약서·보관증</span><span class="info-val" style="font-size:11px">${d.contract || '없음'}</span></div>
-      <div class="info-row"><span class="info-key">제품군</span><span class="info-val" style="font-size:11px">${d.product_group || '-'}</span></div>
-      <div class="info-row"><span class="info-key">상태</span><span class="info-val">${d.status}</span></div>
     </div>
   </div>`;
 
