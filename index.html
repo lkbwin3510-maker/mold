@@ -7,20 +7,20 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0e1117;
-  --surface: #161b27;
-  --surface2: #1e2637;
-  --border: #2a3347;
-  --border2: #3a4a66;
-  --text: #e2e8f0;
-  --text2: #8b9ab4;
-  --text3: #4a5a78;
-  --accent: #3b82f6;
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --surface2: #f1f4f8;
+  --border: #e2e8f0;
+  --border2: #c8d3e0;
+  --text: #1a2332;
+  --text2: #5a6a80;
+  --text3: #9aaabb;
+  --accent: #2563eb;
   --accent2: #1d4ed8;
-  --ok: #10b981;
-  --warn: #f59e0b;
-  --danger: #ef4444;
-  --purple: #8b5cf6;
+  --ok: #059669;
+  --warn: #d97706;
+  --danger: #dc2626;
+  --purple: #7c3aed;
   --mono: "IBM Plex Mono", monospace;
   --sans: "IBM Plex Sans KR", sans-serif;
 }
@@ -171,10 +171,10 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
   margin-top:4px;
   display:inline-block;
 }
-.badge-ok    { background:#0d2e1e; color:var(--ok); border:1px solid #134d30; }
-.badge-warn  { background:#2e1f00; color:var(--warn); border:1px solid #5c3d00; }
-.badge-danger{ background:#2e0f0f; color:var(--danger); border:1px solid #5c1c1c; }
-.badge-gray  { background:#1a2035; color:var(--text2); border:1px solid var(--border2); }
+.badge-ok    { background:#d1fae5; color:#065f46; border:1px solid #a7f3d0; }
+.badge-warn  { background:#fef3c7; color:#92400e; border:1px solid #fde68a; }
+.badge-danger{ background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+.badge-gray  { background:#f1f4f8; color:#5a6a80; border:1px solid #e2e8f0; }
 
 /* ── 수명 바 ── */
 .life-card {
@@ -312,13 +312,13 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 
 /* ── 비고 카드 ── */
 .note-card {
-  background:#1a1f10;
-  border:1px solid #2d3a1a;
+  background:#f0f7ff;
+  border:1px solid #bfdbfe;
   border-radius:10px;
   padding:14px 18px;
   margin-bottom:16px;
   font-size:13px;
-  color:#9ab56e;
+  color:#1e40af;
   font-family:var(--mono);
 }
 
@@ -384,9 +384,10 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 }
 .modal-bg.open { display:flex; }
 .modal {
-  background:var(--surface2);
+  background:#ffffff;
   border:1px solid var(--border2);
   border-radius:14px;
+  box-shadow:0 20px 60px rgba(0,0,0,.12);
   padding:28px;
   width:100%;
   max-width:480px;
@@ -424,8 +425,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 
 /* ── 스크롤바 ── */
 ::-webkit-scrollbar { width:6px; height:6px; }
-::-webkit-scrollbar-track { background:var(--bg); }
-::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
+::-webkit-scrollbar-track { background:#f1f4f8; }
+::-webkit-scrollbar-thumb { background:#c8d3e0; border-radius:3px; }
 
 /* ── 애니메이션 ── */
 @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
@@ -460,8 +461,6 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 <div class="home-wrap" id="home-wrap">
   <div class="home-title">전체 현황</div>
   <div class="stat-grid" id="stat-grid"></div>
-  <div class="recent-title">수명 경고 품번</div>
-  <div class="alert-list" id="alert-list"></div>
 </div>
 
 <!-- 결과 없음 -->
@@ -765,24 +764,24 @@ function renderHome() {
   const ok     = MOLD_DATA.filter(d => d.life_ratio && d.life_ratio < 0.7).length;
 
   document.getElementById('stat-grid').innerHTML = `
-    <div class="stat-card" onclick="filterAlert('all')">
+    <div class="stat-card" >
       <div class="stat-num" style="color:var(--text)">${total}</div>
       <div class="stat-lbl">전체 금형</div>
     </div>
-    <div class="stat-card" onclick="filterAlert('danger')">
+    <div class="stat-card" >
       <div class="stat-num" style="color:var(--danger)">${danger}</div>
       <div class="stat-lbl">즉시 점검</div>
     </div>
-    <div class="stat-card" onclick="filterAlert('warn')">
+    <div class="stat-card" >
       <div class="stat-num" style="color:var(--warn)">${warn}</div>
       <div class="stat-lbl">주의 필요</div>
     </div>
-    <div class="stat-card" onclick="filterAlert('ok')">
+    <div class="stat-card" >
       <div class="stat-num" style="color:var(--ok)">${ok}</div>
       <div class="stat-lbl">정상</div>
     </div>`;
 
-  renderAlertList('danger');
+
 }
 
 function filterAlert(type) { renderAlertList(type); }
