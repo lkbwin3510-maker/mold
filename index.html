@@ -458,6 +458,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
       <div class="autocomplete-list" id="ac-list" style="display:none"></div>
     </div>
     <button class="search-btn" onclick="doSearch()">조회</button>
+    <button class="search-btn" onclick="openAddModal()" style="background:#059669;white-space:nowrap">+ 신규 등록</button>
   </div>
 </div>
 
@@ -465,6 +466,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 <div class="home-wrap" id="home-wrap">
   <div class="home-title">전체 현황</div>
   <div class="stat-grid" id="stat-grid"></div>
+  <!-- 목록 패널 -->
+  <div id="stat-list-wrap" style="display:none;margin-top:20px"></div>
 </div>
 
 <!-- 결과 없음 -->
@@ -478,6 +481,78 @@ body { background:var(--bg); color:var(--text); font-family:var(--sans); min-hei
 
 <!-- 대시보드 -->
 <div class="dashboard" id="dashboard"></div>
+
+<!-- 신규 품목 등록 모달 -->
+<div class="modal-bg" id="add-modal-bg">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title">신규 품목 등록</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="modal-field">
+        <div class="modal-label">품번 *</div>
+        <input class="modal-input" id="a-part-id" type="text" placeholder="예: P11-C1-1011">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">구분 *</div>
+        <select class="modal-select" id="a-category">
+          <option>기구물</option><option>수동소자</option><option>미생산</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">금형명</div>
+      <input class="modal-input" id="a-mold-name" type="text" placeholder="예: BOFC-C1 상판">
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">제품군 (모델명)</div>
+      <input class="modal-input" id="a-product-group" type="text" placeholder="예: BOFC-C1">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div class="modal-field">
+        <div class="modal-label">캐비티</div>
+        <input class="modal-input" id="a-cavity" type="text" placeholder="예: 2">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">보증 SHOT</div>
+        <input class="modal-input" id="a-warranty" type="number" placeholder="예: 200000">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">생산 SHOT</div>
+        <input class="modal-input" id="a-prod-shot" type="number" placeholder="예: 50000">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="modal-field">
+        <div class="modal-label">보관 업체</div>
+        <input class="modal-input" id="a-storage" type="text" placeholder="예: 티에스테크원">
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">재질</div>
+        <input class="modal-input" id="a-material" type="text" placeholder="예: ABS">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="modal-field">
+        <div class="modal-label">국내/해외</div>
+        <select class="modal-select" id="a-domestic">
+          <option>국내</option><option>해외</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <div class="modal-label">금형 제작일</div>
+        <input class="modal-input" id="a-mfg-date" type="date">
+      </div>
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">비고</div>
+      <textarea class="modal-textarea" id="a-note" placeholder="특이사항 입력"></textarea>
+    </div>
+    <div style="font-size:11px;color:#d97706;margin-top:4px">* 등록된 데이터는 브라우저 세션 동안만 유지됩니다. 구글 시트 연동 시 영구 저장됩니다.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeAddModal()">취소</button>
+      <button class="modal-save" style="background:#059669" onclick="saveNewItem()">등록</button>
+    </div>
+  </div>
+</div>
 
 <!-- 수리 등록 모달 -->
 <div class="modal-bg" id="modal-bg">
@@ -888,31 +963,155 @@ function saveRepair() {
 }
 
 // ── 홈 통계 ──
+let activeStatType = null;
+
 function renderHome() {
-  const total = MOLD_DATA.length;
+  const total  = MOLD_DATA.length;
   const danger = MOLD_DATA.filter(d => d.life_ratio >= 0.9).length;
   const warn   = MOLD_DATA.filter(d => d.life_ratio >= 0.7 && d.life_ratio < 0.9).length;
   const ok     = MOLD_DATA.filter(d => d.life_ratio && d.life_ratio < 0.7).length;
 
   document.getElementById('stat-grid').innerHTML = `
-    <div class="stat-card" >
-      <div class="stat-num" style="color:var(--text)">${total}</div>
+    <div class="stat-card" id="sc-all" onclick="toggleStatList('all')" style="cursor:pointer">
+      <div class="stat-num" style="color:#0d1420">${total}</div>
       <div class="stat-lbl">전체 금형</div>
     </div>
-    <div class="stat-card" >
+    <div class="stat-card" id="sc-danger" onclick="toggleStatList('danger')" style="cursor:pointer">
       <div class="stat-num" style="color:var(--danger)">${danger}</div>
       <div class="stat-lbl">즉시 점검</div>
     </div>
-    <div class="stat-card" >
+    <div class="stat-card" id="sc-warn" onclick="toggleStatList('warn')" style="cursor:pointer">
       <div class="stat-num" style="color:var(--warn)">${warn}</div>
       <div class="stat-lbl">주의 필요</div>
     </div>
-    <div class="stat-card" >
+    <div class="stat-card" id="sc-ok" onclick="toggleStatList('ok')" style="cursor:pointer">
       <div class="stat-num" style="color:var(--ok)">${ok}</div>
       <div class="stat-lbl">정상</div>
     </div>`;
+}
 
+function toggleStatList(type) {
+  const wrap = document.getElementById('stat-list-wrap');
+  // 같은 카드 다시 누르면 닫기
+  if (activeStatType === type) {
+    wrap.style.display = 'none';
+    activeStatType = null;
+    document.querySelectorAll('.stat-card').forEach(c => c.style.outline='none');
+    return;
+  }
+  activeStatType = type;
+  // 선택된 카드 강조
+  document.querySelectorAll('.stat-card').forEach(c => c.style.outline='none');
+  const colors = { all:'#2563eb', danger:'#dc2626', warn:'#d97706', ok:'#059669' };
+  const el = document.getElementById('sc-'+type);
+  if (el) el.style.outline = '2px solid ' + colors[type];
+  renderStatList(type);
+  wrap.style.display = 'block';
+}
 
+function renderStatList(type) {
+  const wrap = document.getElementById('stat-list-wrap');
+  const labels = { all:'전체 금형', danger:'즉시 점검', warn:'주의 필요', ok:'정상' };
+  const colors = { all:'#2563eb', danger:'#dc2626', warn:'#d97706', ok:'#059669' };
+
+  let items;
+  if (type === 'danger') items = MOLD_DATA.filter(d => d.life_ratio >= 0.9).sort((a,b) => b.life_ratio - a.life_ratio);
+  else if (type === 'warn') items = MOLD_DATA.filter(d => d.life_ratio >= 0.7 && d.life_ratio < 0.9).sort((a,b) => b.life_ratio - a.life_ratio);
+  else if (type === 'ok')   items = MOLD_DATA.filter(d => d.life_ratio && d.life_ratio < 0.7).sort((a,b) => b.life_ratio - a.life_ratio);
+  else items = [...MOLD_DATA].sort((a,b) => (b.life_ratio||0) - (a.life_ratio||0));
+
+  let html = `<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+    <span style="font-size:12px;font-weight:600;color:${colors[type]};font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em">${labels[type]}</span>
+    <span style="font-size:12px;color:#6a7a90">${items.length}개</span>
+  </div>`;
+
+  html += `<div style="background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden">`;
+
+  // 헤더
+  const isDanger = type === 'danger';
+  html += `<div style="display:grid;grid-template-columns:${isDanger ? '30px ' : ''}1.4fr 1.8fr 1fr 1fr 1fr;padding:10px 16px;background:#f8f9fb;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:#3a4a60;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em">
+    ${isDanger ? '<span>순위</span>' : ''}
+    <span>품번</span><span>금형명</span><span style="text-align:center">보관업체</span><span style="text-align:right">생산SHOT</span><span style="text-align:right">수명</span>
+  </div>`;
+
+  items.forEach((d, i) => {
+    const st = lifeStatus(d.life_ratio);
+    const pct = d.life_ratio !== null ? (d.life_ratio*100).toFixed(1)+'%' : '-';
+    const bg = i % 2 === 0 ? '#ffffff' : '#f8f9fb';
+
+    // 즉시점검 우선순위 뱃지
+    let rankBadge = '';
+    if (isDanger) {
+      const rankColor = i === 0 ? '#dc2626' : i === 1 ? '#ea580c' : i === 2 ? '#d97706' : '#6a7a90';
+      const rankLabel = i === 0 ? '1위' : i === 1 ? '2위' : i === 2 ? '3위' : (i+1)+'위';
+      rankBadge = `<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${rankColor}">${rankLabel}</span>`;
+    }
+
+    html += `<div onclick="selectStatItem('${d.part_id.replace(/'/g,"\'")}')"
+      style="display:grid;grid-template-columns:${isDanger ? '30px ' : ''}1.4fr 1.8fr 1fr 1fr 1fr;padding:11px 16px;background:${bg};border-bottom:1px solid var(--border);cursor:pointer;align-items:center;transition:background .1s"
+      onmouseover="this.style.background='#eef3ff'" onmouseout="this.style.background='${bg}'">
+      ${isDanger ? rankBadge : ''}
+      <span style="font-family:var(--mono);font-size:12px;color:#2563eb;font-weight:500">${d.part_id}</span>
+      <span style="font-size:12px;color:#0d1420">${d.mold_name || '-'}</span>
+      <span style="font-size:12px;color:#3a4a60;text-align:center">${d.storage || '-'}</span>
+      <span style="font-family:var(--mono);font-size:12px;color:#0d1420;text-align:right">${d.prod_shot ? Number(d.prod_shot).toLocaleString() : '-'}</span>
+      <span style="text-align:right"><span class="status-badge ${st.cls}" style="font-size:10px;padding:2px 8px">${pct}</span></span>
+    </div>`;
+  });
+  html += `</div>`;
+  wrap.innerHTML = html;
+}
+
+function selectStatItem(partId) {
+  const found = MOLD_DATA.find(d => d.part_id === partId);
+  if (!found) return;
+  document.getElementById('stat-list-wrap').style.display='none';
+  activeStatType = null;
+  document.querySelectorAll('.stat-card').forEach(c => c.style.outline='none');
+  input.value = partId;
+  document.getElementById('home-wrap').style.display='none';
+  renderDashboard(found);
+}
+
+// ── 신규 품목 등록 ──
+function openAddModal() {
+  document.getElementById('add-modal-bg').classList.add('open');
+}
+function closeAddModal() {
+  document.getElementById('add-modal-bg').classList.remove('open');
+}
+function saveNewItem() {
+  const partId = document.getElementById('a-part-id').value.trim();
+  if (!partId) { alert('품번은 필수 입력입니다.'); return; }
+  if (MOLD_DATA.find(d => d.part_id === partId)) { alert('이미 존재하는 품번입니다.'); return; }
+  const warranty = parseInt(document.getElementById('a-warranty').value) || null;
+  const prodShot = parseInt(document.getElementById('a-prod-shot').value) || null;
+  const ratio = (warranty && prodShot && warranty > 0) ? Math.round(prodShot/warranty*10000)/10000 : null;
+  const newItem = {
+    part_id:       partId,
+    category:      document.getElementById('a-category').value,
+    product_group: document.getElementById('a-product-group').value.trim(),
+    mold_name:     document.getElementById('a-mold-name').value.trim(),
+    cavity:        document.getElementById('a-cavity').value.trim(),
+    mfg_date:      document.getElementById('a-mfg-date').value,
+    domestic:      document.getElementById('a-domestic').value,
+    storage:       document.getElementById('a-storage').value.trim(),
+    material:      document.getElementById('a-material').value.trim(),
+    warranty_shot: warranty,
+    incoming_qty:  null,
+    prod_shot:     prodShot,
+    life_ratio:    ratio,
+    note:          document.getElementById('a-note').value.trim(),
+    contract:      '',
+    status:        document.getElementById('a-category').value === '미생산' ? '미생산' : '생산중',
+  };
+  MOLD_DATA.push(newItem);
+  closeAddModal();
+  renderHome();
+  // 등록 후 바로 대시보드로 이동
+  input.value = partId;
+  document.getElementById('home-wrap').style.display='none';
+  renderDashboard(newItem);
 }
 
 function filterAlert(type) { renderAlertList(type); }
