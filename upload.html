@@ -27,14 +27,36 @@ const MOLD_DATA_SEED = [{"part_id": "AJP-00682", "category": "기구물", "produ
 
 const { createClient } = window.supabase;
 const sb = createClient(
-  '__SUPABASE_URL__',
-  '__SUPABASE_ANON_KEY__'
+  'https://nrkollhoqsnroqlecmuy.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ya29sbGhvcXNucm9xbGVjbXV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1MTM3OTIsImV4cCI6MjA5NDA4OTc5Mn0.6ZPnbNwPIXhxGCSmCStOtinCfVzNVT3j5W1-tN1aBvA'
 );
 
 function log(msg, cls='info') {
   const el = document.getElementById('log');
   el.innerHTML += '<span class="' + cls + '">' + msg + '</span><br>';
   el.scrollTop = el.scrollHeight;
+}
+
+function sanitize(item) {
+  const n = { ...item };
+  // 정수형 필드 강제 변환 (문자열이나 float 허용)
+  ['warranty_shot','incoming_qty','prod_shot'].forEach(k => {
+    if (n[k] !== null && n[k] !== undefined) {
+      const v = parseFloat(n[k]);
+      n[k] = isNaN(v) ? null : Math.round(v);
+    }
+  });
+  // life_ratio float
+  if (n.life_ratio !== null && n.life_ratio !== undefined) {
+    const v = parseFloat(n.life_ratio);
+    n.life_ratio = isNaN(v) ? null : v;
+  }
+  // 문자열 필드 null 안전화
+  ['part_id','category','product_group','mold_name','cavity','mfg_date',
+   'domestic','storage','material','note','contract','status','last_prod_date'].forEach(k => {
+    if (n[k] === undefined) n[k] = null;
+  });
+  return n;
 }
 
 async function upload() {
@@ -44,7 +66,6 @@ async function upload() {
   document.getElementById('log').innerHTML = '';
   prog.style.display = 'block';
 
-  // 기존 데이터 확인
   log('기존 데이터 확인 중...');
   const { data: existing } = await sb.from('molds').select('part_id');
   if (existing && existing.length > 0) {
@@ -52,34 +73,49 @@ async function upload() {
   }
 
   const CHUNK = 30;
-  const total = MOLD_DATA_SEED.length;
-  let success = 0, fail = 0;
+  const data = MOLD_DATA_SEED.map(sanitize);
+  const total = data.length;
+  let success = 0, fail = 0, skip = 0;
 
   log('총 ' + total + '개 금형 업로드 시작...');
 
   for (let i = 0; i < total; i += CHUNK) {
-    const chunk = MOLD_DATA_SEED.slice(i, i + CHUNK);
+    const chunk = data.slice(i, i + CHUNK);
     const { error } = await sb.from('molds').upsert(chunk, { onConflict: 'part_id' });
-    if (error) {
-      log('오류 [' + i + '~' + (i+chunk.length) + ']: ' + error.message, 'err');
-      fail += chunk.length;
-    } else {
+
+    if (!error) {
       success += chunk.length;
+    } else {
+      // 청크 실패 시 한 건씩 재시도
+      log('청크 오류(' + error.message + '), 개별 재시도 중...', 'info');
+      for (const item of chunk) {
+        const { error: e2 } = await sb.from('molds').upsert([item], { onConflict: 'part_id' });
+        if (!e2) {
+          success++;
+        } else {
+          log('  실패: ' + item.part_id + ' → ' + e2.message, 'err');
+          fail++;
+        }
+      }
     }
+
     prog.value = Math.round(((i + chunk.length) / total) * 100);
-    log((i + chunk.length) + ' / ' + total + ' 처리 완료');
-    await new Promise(r => setTimeout(r, 100));
+    log(Math.min(i + chunk.length, total) + ' / ' + total + ' 처리 (' + success + '성공 / ' + fail + '실패)');
+    await new Promise(r => setTimeout(r, 80));
   }
 
   if (fail === 0) {
-    log('완료! ' + success + '개 업로드 성공 ✓', 'ok');
+    log('완료! ' + success + '개 모두 성공 ✓', 'ok');
     log('이제 index.html을 열면 Supabase에서 데이터를 불러옵니다.', 'ok');
   } else {
-    log('완료 (성공: ' + success + ', 실패: ' + fail + ')', 'err');
+    log('완료 — 성공: ' + success + '  실패: ' + fail, 'err');
+    log('실패한 품번은 위 로그에서 확인하세요.', 'err');
   }
   btn.disabled = false;
 }
 </script>
 </body>
 </html>
+
+
 
