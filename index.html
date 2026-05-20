@@ -1585,13 +1585,19 @@ function openAddModal() {
 function closeAddModal() {
   document.getElementById('add-modal-bg').classList.remove('open');
 }
-function saveNewItem() {
+async function saveNewItem() {
   const partId = document.getElementById('a-part-id').value.trim();
   if (!partId) { alert('품번은 필수 입력입니다.'); return; }
   if (MOLD_DATA.find(d => d.part_id === partId)) { alert('이미 존재하는 품번입니다.'); return; }
   const warranty = parseInt(document.getElementById('a-warranty').value) || null;
   const prodShot = parseInt(document.getElementById('a-prod-shot').value) || null;
   const ratio = (warranty && prodShot && warranty > 0) ? Math.round(prodShot/warranty*10000)/10000 : null;
+  const contract = (() => {
+    const ct = document.getElementById('a-contract-type').value;
+    if (ct === 'none') return '';
+    if (ct === 'url') return document.getElementById('a-contract-url').value.trim();
+    return document.getElementById('a-contract-text').value.trim();
+  })();
   const newItem = {
     part_id:       partId,
     category:      document.getElementById('a-category').value,
@@ -1607,20 +1613,44 @@ function saveNewItem() {
     prod_shot:     prodShot,
     life_ratio:    ratio,
     note:          document.getElementById('a-note').value.trim(),
-    contract:      (() => {
-      const ct = document.getElementById('a-contract-type').value;
-      if (ct === 'none') return '';
-      if (ct === 'url') return document.getElementById('a-contract-url').value.trim();
-      return document.getElementById('a-contract-text').value.trim();
-    })(),
+    contract:      contract,
     status:        document.getElementById('a-category').value === '미생산' ? '미생산' : '생산중',
   };
   MOLD_DATA.push(newItem);
   closeAddModal();
+
+  // 구글 시트에 저장
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action:        'add_new_mold',
+        part_id:       newItem.part_id,
+        category:      newItem.category,
+        product_group: newItem.product_group,
+        mold_name:     newItem.mold_name,
+        cavity:        newItem.cavity,
+        mfg_date:      newItem.mfg_date,
+        domestic:      newItem.domestic,
+        storage:       newItem.storage,
+        material:      newItem.material,
+        warranty_shot: newItem.warranty_shot,
+        prod_shot:     newItem.prod_shot,
+        status:        newItem.status,
+        note:          newItem.note,
+        contract:      newItem.contract,
+        life_ratio:    newItem.life_ratio,
+      })
+    });
+    document.getElementById('sync-status').textContent = '✓ 시트에 저장됨 ' + new Date().toLocaleTimeString('ko-KR');
+    document.getElementById('sync-status').style.color = 'var(--ok)';
+  } catch(e) {
+    console.log('시트 저장 실패:', e);
+  }
+
   renderHome();
-  // 등록 후 바로 대시보드로 이동
   input.value = partId;
-  document.getElementById('home-wrap').style.display='none';
+  showPage('home');
   renderDashboard(newItem);
 }
 
