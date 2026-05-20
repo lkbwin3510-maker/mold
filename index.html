@@ -1578,34 +1578,44 @@ async function loadFromSheet() {
     const res = await fetch(API_URL + '?t=' + Date.now());
     const json = await res.json();
     if (json.data && json.data.length > 0) {
-      // 구글 시트 데이터로 MOLD_DATA 업데이트
-      json.data.forEach(row => {
-        const idx = MOLD_DATA.findIndex(d => d.part_id === row.part_id);
-        if (idx >= 0) {
-          // 기존 데이터 업데이트
-          MOLD_DATA[idx].prod_shot = row.prod_shot ? Number(row.prod_shot) : MOLD_DATA[idx].prod_shot;
-          MOLD_DATA[idx].warranty_shot = row.warranty_shot ? Number(row.warranty_shot) : MOLD_DATA[idx].warranty_shot;
-          MOLD_DATA[idx].mold_name = row.mold_name || MOLD_DATA[idx].mold_name;
-          MOLD_DATA[idx].storage = row.storage || MOLD_DATA[idx].storage;
-          MOLD_DATA[idx].material = row.material || MOLD_DATA[idx].material;
-          MOLD_DATA[idx].mfg_date = row.mfg_date || MOLD_DATA[idx].mfg_date;
-          MOLD_DATA[idx].note = row.note || MOLD_DATA[idx].note;
-          MOLD_DATA[idx].contract = row.contract || MOLD_DATA[idx].contract;
-          MOLD_DATA[idx].status = row.status || MOLD_DATA[idx].status;
-          MOLD_DATA[idx].cavity = row.cavity || MOLD_DATA[idx].cavity;
-          // 수명 재계산
-          if (MOLD_DATA[idx].warranty_shot && MOLD_DATA[idx].prod_shot) {
-            MOLD_DATA[idx].life_ratio = Math.round(MOLD_DATA[idx].prod_shot / MOLD_DATA[idx].warranty_shot * 10000) / 10000;
-          }
-        }
-      });
+      // 구글 시트 데이터를 완전히 우선 사용 — MOLD_DATA 전체 교체
+      const sheetData = json.data.map(row => {
+        const ws = row.warranty_shot ? Number(String(row.warranty_shot).replace(/,/g,'')) : null;
+        const ps = row.prod_shot     ? Number(String(row.prod_shot).replace(/,/g,''))     : null;
+        const ratio = (ws && ps && ws > 0) ? Math.round(ps/ws*10000)/10000 : null;
+        return {
+          part_id:       String(row.part_id||'').trim(),
+          category:      String(row.category||'').trim(),
+          product_group: String(row.product_group||'').trim(),
+          mold_name:     String(row.mold_name||'').trim(),
+          cavity:        String(row.cavity||'').trim(),
+          mfg_date:      String(row.mfg_date||'').trim().slice(0,10),
+          domestic:      String(row.domestic||'').trim(),
+          storage:       String(row.storage||'').trim(),
+          material:      String(row.material||'').trim(),
+          warranty_shot: ws,
+          incoming_qty:  row.incoming_qty ? Number(String(row.incoming_qty).replace(/,/g,'')) : null,
+          prod_shot:     ps,
+          life_ratio:    ratio,
+          note:          String(row.note||'').trim(),
+          contract:      String(row.contract||'').trim(),
+          status:        String(row.status||'생산중').trim(),
+          last_prod_date: null,
+        };
+      }).filter(d => d.part_id);
+
+      // MOLD_DATA 전체 교체
+      MOLD_DATA.length = 0;
+      sheetData.forEach(d => MOLD_DATA.push(d));
+
       document.getElementById('sync-status').textContent = '✓ 시트 연동됨 ' + new Date().toLocaleTimeString('ko-KR');
       document.getElementById('sync-status').style.color = 'var(--ok)';
+      renderHome();
     }
   } catch(e) {
-    document.getElementById('sync-status').textContent = '⚠ 오프라인 모드';
+    document.getElementById('sync-status').textContent = '⚠ 오프라인 모드 (내장 데이터 사용)';
     document.getElementById('sync-status').style.color = 'var(--warn)';
-    console.log('시트 연동 실패, 내장 데이터 사용:', e);
+    console.log('시트 연동 실패:', e);
   } finally {
     document.getElementById('loading-overlay').style.display='none';
   }
