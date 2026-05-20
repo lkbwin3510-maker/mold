@@ -1417,13 +1417,41 @@ function saveRepair(){
   const att=[];
   files.forEach(file=>{const r=new FileReader();r.onload=e=>{att.push({name:file.name,url:e.target.result});if(att.length===files.length)finishSave(att);};r.readAsDataURL(file);});
 }
-function finishSave(att){
-  const r={date:document.getElementById('m-date').value,type:document.getElementById('m-type').value,content:document.getElementById('m-content').value,worker:document.getElementById('m-worker').value,days:document.getElementById('m-days').value,attachments:att};
+async function finishSave(att){
+  const r={
+    date:document.getElementById('m-date').value,
+    type:document.getElementById('m-type').value,
+    content:document.getElementById('m-content').value,
+    worker:document.getElementById('m-worker').value,
+    days:document.getElementById('m-days').value,
+    attachments:att
+  };
   if(!repairStore[currentPartId])repairStore[currentPartId]=[];
   repairStore[currentPartId].push(r);
   closeModal();
-  const f=MOLD_DATA.find(d=>d.part_id===currentPartId);
-  if(f)renderDashboard(f);
+
+  // 구글 시트에 저장
+  const found=MOLD_DATA.find(d=>d.part_id===currentPartId);
+  try {
+    await fetch(API_URL, {
+      method:'POST',
+      body: JSON.stringify({
+        action: 'add_repair',
+        part_id: currentPartId,
+        mold_name: found ? found.mold_name : '',
+        date: r.date,
+        type: r.type,
+        content: r.content,
+        worker: r.worker,
+        days: r.days,
+      })
+    });
+    console.log('수리이력 시트 저장 완료');
+  } catch(e) {
+    console.log('시트 저장 실패 (로컬에는 저장됨):', e);
+  }
+
+  if(found)renderDashboard(found);
 }
 
 function renderModelList(q,items){
@@ -1490,7 +1518,7 @@ function toggleContractInput() {
   document.getElementById('e-contract-text').style.display = type === 'text' ? 'block' : 'none';
   document.getElementById('e-contract-url').style.display  = type === 'url'  ? 'block' : 'none';
 }
-function saveEdit() {
+async function saveEdit() {
   const d = MOLD_DATA.find(d => d.part_id === currentPartId);
   if (!d) return;
   d.mold_name      = document.getElementById('e-mold-name').value.trim();
@@ -1512,6 +1540,33 @@ function saveEdit() {
   d.life_ratio = (d.warranty_shot && d.prod_shot && d.warranty_shot > 0)
     ? Math.round(d.prod_shot / d.warranty_shot * 10000) / 10000
     : null;
+
+  // 구글 시트에 저장
+  try {
+    await fetch(API_URL, {
+      method:'POST',
+      body: JSON.stringify({
+        action: 'update_mold',
+        part_id: d.part_id,
+        mold_name: d.mold_name,
+        product_group: d.product_group,
+        cavity: d.cavity,
+        warranty_shot: d.warranty_shot,
+        prod_shot: d.prod_shot,
+        storage: d.storage,
+        material: d.material,
+        domestic: d.domestic,
+        mfg_date: d.mfg_date,
+        note: d.note,
+        contract: d.contract,
+      })
+    });
+    document.getElementById('sync-status').textContent = '✓ 저장됨 ' + new Date().toLocaleTimeString('ko-KR');
+    document.getElementById('sync-status').style.color = 'var(--ok)';
+  } catch(e) {
+    console.log('시트 저장 실패:', e);
+  }
+
   closeEditModal();
   renderDashboard(d);
   renderHome();
@@ -1610,6 +1665,9 @@ async function loadFromSheet() {
 
       document.getElementById('sync-status').textContent = '✓ 시트 연동됨 ' + new Date().toLocaleTimeString('ko-KR');
       document.getElementById('sync-status').style.color = 'var(--ok)';
+
+      // 수리이력 시트도 불러오기
+      await loadRepairHistory();
       renderHome();
     }
   } catch(e) {
@@ -1618,6 +1676,32 @@ async function loadFromSheet() {
     console.log('시트 연동 실패:', e);
   } finally {
     document.getElementById('loading-overlay').style.display='none';
+  }
+}
+
+async function loadRepairHistory() {
+  try {
+    const res = await fetch(API_URL + '?sheet=수리이력&t=' + Date.now());
+    const json = await res.json();
+    if (json.data && json.data.length > 0) {
+      // 기존 repairStore 초기화 후 시트 데이터로 채우기
+      Object.keys(repairStore).forEach(k => delete repairStore[k]);
+      json.data.forEach(row => {
+        const pid = String(row.part_id||'').trim();
+        if (!pid) return;
+        if (!repairStore[pid]) repairStore[pid] = [];
+        repairStore[pid].push({
+          date:    String(row.date||'').slice(0,10),
+          type:    String(row.type||''),
+          content: String(row.content||''),
+          worker:  String(row.worker||''),
+          days:    String(row.days||''),
+          attachments: []
+        });
+      });
+    }
+  } catch(e) {
+    console.log('수리이력 로드 실패:', e);
   }
 }
 
