@@ -41,7 +41,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .topbar-title{font-size:14px;font-weight:700;color:var(--text);flex:1;letter-spacing:-.02em}
 .search-wrap{position:relative;flex:1;max-width:380px}
 .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none}
-.search-input{width:100%;background:var(--surf2);border:1.5px solid var(--border);border-radius:20px;padding:8px 14px 8px 34px;font-family:var(--sans);font-size:12px;color:var(--text);outline:none;transition:all .15s}
+.search-input{width:100%;background:var(--surf2);border:1.5px solid var(--border);border-radius:20px;padding:8px 14px;font-family:var(--sans);font-size:12px;color:var(--text);outline:none;transition:all .15s}
 .search-input:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(79,142,247,.1)}
 .search-input::placeholder{color:var(--text3)}
 .autocomplete-list{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid var(--border);border-radius:var(--r);z-index:300;max-height:240px;overflow-y:auto;box-shadow:var(--sh-md);display:none}
@@ -226,7 +226,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
   <div class="topbar">
     <div class="topbar-title" id="topbar-title">전체 현황</div>
     <div class="search-wrap">
-      <span class="search-icon">🔍</span>
       <input class="search-input" id="search-input" type="text" placeholder="품번 또는 모델명 검색..." autocomplete="off" spellcheck="false">
       <div class="autocomplete-list" id="ac-list"></div>
     </div>
@@ -1189,12 +1188,27 @@ function selectItem(pid){input.value=pid;acList.style.display='none';doSearch();
 function doSearch(){
   const q=input.value.trim();if(!q)return;
   acList.style.display='none';
+
+  // 1. 정확히 일치하는 품번 우선
+  const exact=MOLD_DATA.find(d=>d.part_id.toLowerCase()===q.toLowerCase());
+  if(exact){renderDashboard(exact);return;}
+
+  // 2. 품번 부분 일치 — 여러 개면 목록, 하나면 바로 이동
+  const partHits=MOLD_DATA.filter(d=>d.part_id.toLowerCase().includes(q.toLowerCase()));
+  if(partHits.length===1){renderDashboard(partHits[0]);return;}
+  if(partHits.length>1){renderModelList(q,partHits);return;}
+
+  // 3. 모델명(제품군) 검색
   const mh=MOLD_DATA.filter(d=>d.product_group&&d.product_group.toLowerCase().includes(q.toLowerCase()));
-  const ep=MOLD_DATA.find(d=>d.part_id.toLowerCase()===q.toLowerCase());
-  if(!ep&&mh.length>0){renderModelList(q,mh);return;}
-  const found=ep||MOLD_DATA.find(d=>d.part_id.toLowerCase().includes(q.toLowerCase()));
-  if(!found){document.getElementById('noresult-code').textContent=q;showPage('noresult');return;}
-  renderDashboard(found);
+  if(mh.length>0){renderModelList(q,mh);return;}
+
+  // 4. 금형명 검색
+  const nameHits=MOLD_DATA.filter(d=>d.mold_name&&d.mold_name.toLowerCase().includes(q.toLowerCase()));
+  if(nameHits.length===1){renderDashboard(nameHits[0]);return;}
+  if(nameHits.length>1){renderModelList(q,nameHits);return;}
+
+  document.getElementById('noresult-code').textContent=q;
+  showPage('noresult');
 }
 
 let activeStatType=null;
