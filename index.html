@@ -195,6 +195,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 </style>
 </head>
 <body>
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+  <div style="font-size:28px">🔄</div>
+  <div style="font-size:14px;font-weight:600;color:var(--text2)">구글 시트에서 데이터 불러오는 중...</div>
+</div>
 <div class="layout">
 
 <aside class="sidebar">
@@ -227,6 +231,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
       <div class="autocomplete-list" id="ac-list"></div>
     </div>
     <button class="btn-add" onclick="doSearch()">검색</button>
+    <button class="btn-add" onclick="loadFromSheet()" style="background:var(--surf2);color:var(--text2);border:1px solid var(--border);box-shadow:none;font-size:11px;padding:6px 12px" title="구글 시트에서 최신 데이터 불러오기">🔄</button>
+    <span id="sync-status" style="font-size:10px;color:var(--text3);white-space:nowrap;font-family:var(--mono)">연동 중...</span>
   </div>
 
   <div class="page active" id="page-home">
@@ -825,6 +831,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 </style>
 </head>
 <body>
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+  <div style="font-size:28px">🔄</div>
+  <div style="font-size:14px;font-weight:600;color:var(--text2)">구글 시트에서 데이터 불러오는 중...</div>
+</div>
 <div class="layout">
 
 <!-- 사이드바 -->
@@ -1544,8 +1554,51 @@ function saveNewItem() {
   renderDashboard(newItem);
 }
 
+// ── API 연동 ──
+const API_URL = 'https://script.google.com/macros/s/AKfycbxcu0fbrqqp8x2GIVutXICaCyMABN9LQ8ONTtsBV0n5gIToxHr9cc0G4OGxQx8bMPw8/exec';
+
+async function loadFromSheet() {
+  try {
+    document.getElementById('loading-overlay').style.display='flex';
+    const res = await fetch(API_URL + '?t=' + Date.now());
+    const json = await res.json();
+    if (json.data && json.data.length > 0) {
+      // 구글 시트 데이터로 MOLD_DATA 업데이트
+      json.data.forEach(row => {
+        const idx = MOLD_DATA.findIndex(d => d.part_id === row.part_id);
+        if (idx >= 0) {
+          // 기존 데이터 업데이트
+          MOLD_DATA[idx].prod_shot = row.prod_shot ? Number(row.prod_shot) : MOLD_DATA[idx].prod_shot;
+          MOLD_DATA[idx].warranty_shot = row.warranty_shot ? Number(row.warranty_shot) : MOLD_DATA[idx].warranty_shot;
+          MOLD_DATA[idx].mold_name = row.mold_name || MOLD_DATA[idx].mold_name;
+          MOLD_DATA[idx].storage = row.storage || MOLD_DATA[idx].storage;
+          MOLD_DATA[idx].material = row.material || MOLD_DATA[idx].material;
+          MOLD_DATA[idx].mfg_date = row.mfg_date || MOLD_DATA[idx].mfg_date;
+          MOLD_DATA[idx].note = row.note || MOLD_DATA[idx].note;
+          MOLD_DATA[idx].contract = row.contract || MOLD_DATA[idx].contract;
+          MOLD_DATA[idx].status = row.status || MOLD_DATA[idx].status;
+          MOLD_DATA[idx].cavity = row.cavity || MOLD_DATA[idx].cavity;
+          // 수명 재계산
+          if (MOLD_DATA[idx].warranty_shot && MOLD_DATA[idx].prod_shot) {
+            MOLD_DATA[idx].life_ratio = Math.round(MOLD_DATA[idx].prod_shot / MOLD_DATA[idx].warranty_shot * 10000) / 10000;
+          }
+        }
+      });
+      document.getElementById('sync-status').textContent = '✓ 시트 연동됨 ' + new Date().toLocaleTimeString('ko-KR');
+      document.getElementById('sync-status').style.color = 'var(--ok)';
+    }
+  } catch(e) {
+    document.getElementById('sync-status').textContent = '⚠ 오프라인 모드';
+    document.getElementById('sync-status').style.color = 'var(--warn)';
+    console.log('시트 연동 실패, 내장 데이터 사용:', e);
+  } finally {
+    document.getElementById('loading-overlay').style.display='none';
+  }
+}
+
 renderHome();
 showPage('home');
+loadFromSheet();
 </script>
 </body>
 </html>
